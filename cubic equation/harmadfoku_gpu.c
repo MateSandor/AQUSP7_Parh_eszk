@@ -6,6 +6,19 @@
 #include "kernel_loader.h"
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
+
+
+typedef struct cubic_data{
+	float a;
+	float b;
+	float c;
+	float d;
+	float x1;
+	float x2;
+	float x3;
+}Cubic_data;
+
+
 int main() {
     // Input array
     int n = 10;
@@ -80,36 +93,24 @@ int main() {
     while (n != 100000000) {
         clock_t start, end, temp;
         start = clock();
-        double * a = (double * ) malloc(n * sizeof(double));
-        double * b = (double * ) malloc(n * sizeof(double));
-        double * c = (double * ) malloc(n * sizeof(double));
-        double * d = (double * ) malloc(n * sizeof(double));
-        double * x1 = (double * ) malloc(n * sizeof(double));
-        double * x2 = (double * ) malloc(n * sizeof(double));
-        double * x3 = (double * ) malloc(n * sizeof(double));
+		Cubic_data * datas = (Cubic_data*)malloc(n*sizeof(Cubic_data));
 
 	// Pre filling the randomizied data.
 	
         for (int i = 0; i < n; i++) {
-            a[i] = (float)(rand() % 2000 - 1000) / 100;
-            b[i] = (float)(rand() % 2000 - 1000) / 100;
-            c[i] = (float)(rand() % 2000 - 1000) / 100;
-            d[i] = (float)(rand() % 2000 - 1000) / 100;
+            datas[i].a = (float)(rand() % 2000 - 1000) / 100;
+            datas[i].b = (float)(rand() % 2000 - 1000) / 100;
+            datas[i].c = (float)(rand() % 2000 - 1000) / 100;
+            datas[i].d = (float)(rand() % 2000 - 1000) / 100;
         }
 
         // Create the buffer for the input array
-        cl_mem a_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(double), NULL, & err);
-        cl_mem b_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(double), NULL, & err);
-        cl_mem c_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(double), NULL, & err);
-        cl_mem d_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(double), NULL, & err);
+        cl_mem input_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(Cubic_data), NULL, & err);
         if (err != CL_SUCCESS) {
             printf("Error creating buffer: %d\n", err);
             return -1;
         }
 		//output
-        cl_mem x1_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(double), NULL, & err);
-        cl_mem x2_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(double), NULL, & err);
-        cl_mem x3_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, n * sizeof(double), NULL, & err);
         if (err != CL_SUCCESS) {
             printf("Error creating buffer: %d\n", err);
             return -1;
@@ -122,23 +123,14 @@ int main() {
             return -1;
         }
 		//Giving pointers to the kernel
-        err = clSetKernelArg(kernel, 0, sizeof(cl_mem), & a_buffer);
-        err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), & b_buffer);
-        err |= clSetKernelArg(kernel, 2, sizeof(cl_mem), & c_buffer);
-        err |= clSetKernelArg(kernel, 3, sizeof(cl_mem), & d_buffer);
-        err |= clSetKernelArg(kernel, 4, sizeof(cl_mem), & x1_buffer);
-        err |= clSetKernelArg(kernel, 5, sizeof(cl_mem), & x2_buffer);
-        err |= clSetKernelArg(kernel, 6, sizeof(cl_mem), & x3_buffer);
+        err = clSetKernelArg(kernel, 0, sizeof(cl_mem), & input_buffer);
         if (err != CL_SUCCESS) {
             printf("Error setting kernel arguments: %d\n", err);
             return -1;
         }
 
 		//Writing into the buffer
-        err = clEnqueueWriteBuffer(queue, a_buffer, CL_TRUE, 0, n * sizeof(double), a, 0, NULL, NULL);
-        err |= clEnqueueWriteBuffer(queue, b_buffer, CL_TRUE, 0, n * sizeof(double), b, 0, NULL, NULL);
-        err |= clEnqueueWriteBuffer(queue, c_buffer, CL_TRUE, 0, n * sizeof(double), c, 0, NULL, NULL);
-        err |= clEnqueueWriteBuffer(queue, d_buffer, CL_TRUE, 0, n * sizeof(double), d, 0, NULL, NULL);
+        err = clEnqueueWriteBuffer(queue, input_buffer, CL_TRUE, 0, n * sizeof(Cubic_data), datas, 0, NULL, NULL);
         if (err != CL_SUCCESS) {
             printf("Error writing to buffer: %d\n", err);
             return -1;
@@ -151,27 +143,19 @@ int main() {
             return -1;
         }
 
-        err = clEnqueueReadBuffer(queue, x1_buffer, CL_TRUE, 0, n * sizeof(double), x1, 0, NULL, NULL);
-        err |= clEnqueueReadBuffer(queue, x2_buffer, CL_TRUE, 0, n * sizeof(double), x2, 0, NULL, NULL);
-        err |= clEnqueueReadBuffer(queue, x3_buffer, CL_TRUE, 0, n * sizeof(double), x3, 0, NULL, NULL);
+        err = clEnqueueReadBuffer(queue, input_buffer, CL_TRUE, 0, n * sizeof(Cubic_data), datas, 0, NULL, NULL);
         if (err != CL_SUCCESS) {
             printf("Error reading from buffer: %d\n", err);
             return -1;
         }
 
-        clReleaseMemObject(a_buffer);
-        clReleaseMemObject(b_buffer);
-        clReleaseMemObject(c_buffer);
-        clReleaseMemObject(d_buffer);
-        clReleaseMemObject(x1_buffer);
-        clReleaseMemObject(x2_buffer);
-        clReleaseMemObject(x3_buffer);
+        clReleaseMemObject(input_buffer);
 
         /*for (int i = 0; i < n; i++) {
-        	printf("%lf %lf %lf \n", x1[i], x2[i], x3[i]);
+        	printf("%f %f %f %f\n%f %f %f \n", datas[i].a,datas[i].b,datas[i].c,datas[i].d,datas[i].x1, datas[i].x2, datas[i].x3);
         }*/
         end = clock();
-        printf("\n\n%d:  Overall runtime:\t%lf\n", n, ((double)(end - start)) / CLOCKS_PER_SEC);
+        printf("\n\n%d:  Overall runtime:\t%lf\n", n, ((float)(end - start)) / CLOCKS_PER_SEC);
         n *= 10;
     }
     clReleaseKernel(kernel);
