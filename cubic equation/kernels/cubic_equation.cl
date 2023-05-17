@@ -11,7 +11,6 @@ typedef struct cubic_data{
 
 __kernel void cubic_equation(__global Cubic_data* buffer) {
     int idx = get_global_id(0);
-    float M_PI = 3.14159265359;
 
     float p, q, r;
 
@@ -26,8 +25,8 @@ __kernel void cubic_equation(__global Cubic_data* buffer) {
     if (D > 0) {
         float theta = acos(R / sqrt(pow(Q, 3)));
         buffer[idx].x1 = -2 * sqrt(Q) * cos(theta / 3) - p / 3;
-        buffer[idx].x2 = -2 * sqrt(Q) * cos((theta + 2 * M_PI) / 3) - p / 3;
-        buffer[idx].x3 = -2 * sqrt(Q) * cos((theta - 2 * M_PI) / 3) - p / 3;
+        buffer[idx].x2 = -2 * sqrt(Q) * cos((theta + 2 * M_PI_F) / 3) - p / 3;
+        buffer[idx].x3 = -2 * sqrt(Q) * cos((theta - 2 * M_PI_F) / 3) - p / 3;
     } else if (D == 0) {
         buffer[idx].x1 = -2 * cbrt(R) - p / 3;
         buffer[idx].x2 = cbrt(R) - p / 3;
